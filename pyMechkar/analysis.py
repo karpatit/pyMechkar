@@ -1,24 +1,42 @@
 """
-Table1                                                          ####
+analysis                                                        ####
 Author: Tomas Karpati M.D.                                      ####
 Creation date: 2019-01-02                                       ####
-Last Modified: 2020-02-27                                       ####
+Last Modified: 2020-02-28                                       ####
 """
 
 __author__ = "Tomas Karpati <karpati@it4biotech.com>"
 __version__ = "0.1.3"
 
 """
+Table1
 Usage:
-x: character vector with the name of the variables
+data: a pandas dataframe
+x: character list with the name of the variables
 y: the name of the strata variable (optional)
-rn: character vector with the text we want to replace the variable names
-data: the dataset to be used
+rn: character list with the text we want to be used to desxribe the variable names
 miss: include missing statistics: [0=none, 1=only for categorical variables, 2=for all variables]
+catmiss: On categorical variables, adds a new category (Missing) to the available
+categories. Default is FALSE. For activation change this to TRUE. If TRUE, the "miss"
+parameter will not be used for category variables.
+formatted: As default, the table output is formatted as text with values that
+include parenthesis and percentages, e.g. 153 (26.5\%). If you are interested that the
+table return each numeric value as aseparate cell, set this variable to FALSE.
+categorize: If there are categorical variables that are defined as numeric we can
+force the function to take them as categorical (factor) by changing this to TRUE. Default
+is FALSE.
+factorVars: If categorize is set to TRUE, a list of variables to be considered as
+categoricals may be given. In this case, maxcat will not be used and only the variables
+in the list will be converted to factors.
+maxcat: If we force categorize to be TRUE, maxcat will be used to define the
+maximum number of unique values permited for a variable to be considered as categorical.
+Default is 10.
+decimals: Determinate the number of decimal places of numerical data. Default is 1
+messages: This switch will show the iterations of the function through the variables. In case you want to suppress those message set it to FALSE.
 excel: export the table to excel [0=no, 1=yes]
 excel_file: the name of the excel file we want to save the table (optional)
-
 """
+
 import time
 import sys
 import os
@@ -46,41 +64,23 @@ if(pd.__version__ < '0.21.0'):
 else:
     pd.set_option('use_inf_as_na',True)
 
-
-class Table1: #(object):
-
-    def __init__(self, data=None, x='', y='', rn='', miss=True, catmiss=True, formatted=True, categorize=True, factorVars='', maxcat=6, decimals=1, messages=True, dir="report", excel=False, excel_file=''):
-        self.data = data
-        self.x = x
-        self.y = y
-        self.rn = rn
-        self.miss = miss
-        self.catmiss = catmiss
-        self.formatted = formatted
-        self.categorize = categorize
-        self.factorVars = factorVars
-        self.maxcat = maxcat
-        self.decimals = decimals
-        self.messages = messages
-        self.dir = dir
-        self.excel = excel
-        self.excel_file = excel_file
-        ### define sub-functions
-        #self.table1 = self._getTable1(x, data, y, rn, miss, catmiss, formatted, categorize, factorVars, maxcat, decimals, messages, excel, excel_file)
-        #self.explorer = self.exploreData(data, y=None, miss=True, catmiss=True, categorize=True, maxcat=6, decimals=1, dir="report")
-    #def getTable1(self):
+    
+def Table1(data=None, x='',y='', rn='', miss=True, catmiss=True, formatted=True, categorize=True, factorVars='', maxcat=6, decimals=1, messages=True, excel=False, excel_file=''):
+        data.head()
+        print("Begining analysis...")
+        table1 = _getTable1(data,x,  y, rn, miss, catmiss, formatted, categorize, factorVars, maxcat, decimals, messages, excel, excel_file)
     #    #self.table1 = self._getTable1(x, data, y, rn, miss, catmiss, formatted, categorize, factorVars, maxcat, decimals, messages, excel, excel_file)
-    #    return(self.table1)
+        return(table1)
 
-    def _g1(self,var):
+def _g1(var):
         res = {'mean':np.nanmean(var), 'sd':np.nanstd(var)}
         return(res)
 
-    def _g2(self,var):
+def _g2(var):
         res = {'median':np.nanmedian(var), 'irq_25':np.nanpercentile(var,25), 'irq_75':np.nanpercentile(var,75)}
         return(res)
 
-    def _getUniqueCount(self, data):
+def _getUniqueCount(data):
         import pandas as pd
         bb = data.columns.tolist()
         cc = {}
@@ -89,17 +89,17 @@ class Table1: #(object):
         return(pd.Series(cc))
 
 
-    def _to_categorical(self, x):
+def _to_categorical(x):
         x = x.astype('category')
         return(x)
 
-    def _setFactors(self, data, factorVars, unq, catmiss, maxcat):
+def _setFactors(data, factorVars, unq, catmiss, maxcat):
         aa =data.dtypes
         if(len(factorVars) > 0):
             for v in factorVars:
                 #print("Variable %s is a %s" % (v,aa[v].name))
                 if(aa[v].name!='category'):
-                    data.loc[:,v] = self._to_categorical(data[v])
+                    data.loc[:,v] = _to_categorical(data[v])
                 if(catmiss==True):
                     if(data[v].isnull().sum()>0):
                         #print("Adding missing category to %s" % v)
@@ -112,7 +112,7 @@ class Table1: #(object):
             factorVars = factorVars[factorVars <= maxcat]
             for v in factorVars.index:
                 if(aa[v].name!="category"):
-                    data.loc[:,v] = self._to_categorical(data[v])
+                    data.loc[:,v] = _to_categorical(data[v])
                 if(catmiss==True):
                     if(data[v].isnull().sum()>0):
                         data[v].cat.add_categories(['Missing'])
@@ -120,7 +120,7 @@ class Table1: #(object):
         return(data)
 
 
-    def _getSimpleTable(self,x, data, rn, miss, catmiss, formatted, categorize, factorVars, unq, maxcat, decimals, messages):
+def _getSimpleTable(data, x, rn, miss, catmiss, formatted, categorize, factorVars, unq, maxcat, decimals, messages):
         msg=[]
         if (len(rn)==0):
             rn = x
@@ -152,7 +152,7 @@ class Table1: #(object):
             aa = data.dtypes
             #if(categorize==True and data[v].nunique() <= maxcat):
             if(categorize==True and (unq[v] <= maxcat)):
-                data.loc[:,v] = self._to_categorical(data[v])
+                data.loc[:,v] = _to_categorical(data[v])
             ### If date/time, don't show
             if(aa[v].name == 'datetime64[ns]'):
                 msg.append("The variable %s is a date. Dates are not allowed in Table1... avoided" % v)
@@ -162,14 +162,14 @@ class Table1: #(object):
             ### if it is numeric, show
             elif(aa[v].name == 'float64' or aa[v].name == 'int64'):
                 ## report mean and standard deviation
-                t_n = self._g1(data[v])
+                t_n = _g1(data[v])
                 tp = "%s (%s)" % ('{:8,.2f}'.format(round(t_n['mean'],decimals)), '{:8,.2f}'.format(round(t_n['sd'],decimals)))
                 tbl1 = [0, rn[q],"Mean (SD)",1, tp]
                 tbl2 = [0, rn[q],"Mean (SD)",1, round(t_n['mean'],5),round(t_n['sd'],5),'']
                 tableaaaa.append(tbl1)
                 tablebbbb.append(tbl2)
                 ## report median and Interquartile ranges (25%,75%)
-                t_n = self._g2(data[[v]])
+                t_n = _g2(data[[v]])
                 tp = "%s (%s-%s)" % ('{:8,.2f}'.format(round(t_n['median'],decimals)), '{:8,.2f}'.format(round(t_n['irq_25'],decimals)), '{:8,.2f}'.format(round(t_n['irq_75'],decimals)))
                 tbl1 = [0, rn[q],"Median (IQR)",2, tp]
                 tbl2 = [0, rn[q],"Median (IQR)",2, round(t_n['median'],5),round(t_n['irq_25'],5),round(t_n['irq_75'],5)]
@@ -246,7 +246,7 @@ class Table1: #(object):
           return(tablebbbb)
 
 
-    def _pvals(self, x, y, rn, data, unq, messages):
+def _pvals(x, y, rn, data, unq, messages):
         msg = []
         ptab = [] #[["Variables","pval", "n"]]
         if (y!=''):
@@ -304,32 +304,33 @@ class Table1: #(object):
             print(msg)
         return(ptab)
 
-    ###############################################################################################
-    ####################### Begin analysis
-    ###############################################################################################
-    def _getTable1(self, data, x, y, rn, miss, catmiss, formatted, categorize, factorVars, maxcat, decimals, messages, excel, excel_file):
-    #def _getTable1(self):
+###############################################################################################
+####################### Begin analysis
+###############################################################################################
+
+def _getTable1(data, x, y, rn, miss, catmiss, formatted, categorize, factorVars, maxcat, decimals, messages, excel, excel_file):
         import time
         init = time.time()
 
         print("Factorizing... please wait")
-        if (len(x)==0):
+        if (x=='' or len(x)==0):
             x = data.columns.tolist()
         if(y!='' and {y}.issubset(x)):
+            #print(x)
             x.remove(y)
             #if ({'Unnamed: 0'}.issubset(x)):
             #    x.drop('Unnamed: 0')
-        unq = self._getUniqueCount(data)
+        unq = _getUniqueCount(data)
         if ({'Unnamed: 0'}.issubset(unq)):
             unq.drop('Unnamed: 0')
         if (len(factorVars)==0):
             factorVars = unq[unq <= maxcat].index
         #print(data.dtypes)
-        data = self._setFactors(data=data, factorVars=factorVars, unq=unq, catmiss=catmiss, maxcat=maxcat)
+        data = _setFactors(data=data, factorVars=factorVars, unq=unq, catmiss=catmiss, maxcat=maxcat)
         #print(data.dtypes)
         ##### if y is null then make a simple table
         #print("_getSimpleTable pass 1...")
-        tabaaa1 = self._getSimpleTable(x=x, rn=rn, data=data, miss=miss, catmiss=catmiss, unq=unq, formatted=formatted, categorize=categorize, factorVars=factorVars, maxcat=maxcat, decimals=decimals, messages=messages)
+        tabaaa1 = _getSimpleTable(x=x, rn=rn, data=data, miss=miss, catmiss=catmiss, unq=unq, formatted=formatted, categorize=categorize, factorVars=factorVars, maxcat=maxcat, decimals=decimals, messages=messages)
         if(formatted==True):
             tabaaa1 = pd.DataFrame(tabaaa1,columns=["Del","Variables","Categories","n","Population"])
         else:
@@ -345,7 +346,7 @@ class Table1: #(object):
                     elif(min(pd.Series.value_counts(data[y]))==0): #4
                         print("The dependent variable has one or more levels with no items assigned!")
                     else: # 4
-                        data.loc[:,y] = self._to_categorical(data[y])
+                        data.loc[:,y] = _to_categorical(data[y])
                 #if (data[y].nunique() >= 2): #3
                 if (unq[y] > 6): #3
                     print("You have selected a Y that has more than six different values...")
@@ -354,7 +355,7 @@ class Table1: #(object):
                         #print("Category %s" % lv)
                         dtsub = data.loc[data[y]==lv]
                         #print("_getSimpleTable Y pass ...")
-                        tab = self._getSimpleTable(x=dtsub.columns,data=dtsub, rn=rn, miss=miss, unq=unq, catmiss=catmiss, formatted=formatted, categorize=categorize, factorVars=factorVars, maxcat=maxcat, decimals=decimals, messages=False)
+                        tab = _getSimpleTable(x=dtsub.columns,data=dtsub, rn=rn, miss=miss, unq=unq, catmiss=catmiss, formatted=formatted, categorize=categorize, factorVars=factorVars, maxcat=maxcat, decimals=decimals, messages=False)
                         if(formatted==True): # 5
                             tab1 = pd.DataFrame(tab,columns=["Del","Variables","Categories","n",'Category_%s' % lv])
                         else: #5
@@ -365,7 +366,7 @@ class Table1: #(object):
                     #print(tabaaa1)
 
                     #print("_pvals pass ...")
-                    ptab = self._pvals(x=x,y=y, rn=rn, data=data, unq=unq, messages=messages)
+                    ptab = _pvals(x=x,y=y, rn=rn, data=data, unq=unq, messages=messages)
                     ptab = pd.DataFrame(ptab,columns=["Variables","p_value", "n"])
                     #print(ptab)
                     tabaaa1 = pd.merge(tabaaa1, ptab, on=['Variables','n'],how='left')
@@ -383,3 +384,53 @@ class Table1: #(object):
                 print("Excel file written to %s" % excel_file)
         print("------ Finished in % seconds -----" % (time.time() - init))
         return(tabaaa1) #1
+
+    
+############################################################################
+#####   TEST & TRAIN DATASET GENERATION                                 ####
+#####   Author: Tomas Karpati M.D.                                      ####
+#####   Creation date: 2016-08-17                                       ####
+############################################################################
+
+"""
+train_test
+
+Generates a training and test dataset and checks if it is well balanced
+
+data: original dataset
+prop: the proportion of the training dataset. The value is a fractional number between 0 and 1. The value default value is set to 0.7, indicating that the training dataset will contain 60% of the cases and the test dataset will contain the 40% of the cases.
+seed: the desired seed. Using a constant seed value allows to obtain the same individuals on each group when running many times (important feature needed for replicability)
+tableone: a logical value indicating if the Table1 function has to be generated for comparing the train and test division. Default is FALSE 
+
+"""
+
+
+def train_test(data=None,prop=0.7,seed=1,tableone=False):
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    
+    train, test = train_test_split(data, test_size=1-prop, random_state=seed)
+    dtr = train
+    dte = test
+    dtr['split'] = 'train'
+    dte['split'] = 'test'
+    dd = dtr.append(dte)
+    
+    tab1 = Table1(dd,y='split')
+    vn = tab1.loc[tab1['p_value']<0.05]
+    vn = vn['Variables'].tolist()
+    if(len(vn) == 0):
+        print(" ")
+        print("You got a perfectly balanced training and test datasets")
+        print(" ")
+    else:
+        print("WARNING: The following variables are not balanced between the training and test datasets:")
+        print(vn)
+        print("You can try to change the seed value until you get a balanced partition.")
+        print("Alternatively, you can ommit this warning and exclude those variables from your model")
+        print(" ")
+    
+    if(tableone == True):
+        print(tab1)
+    return([train,test])
+

@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pyMechkar-tomask", # Replace with your own username
-    version="0.1.3",
+    version="0.1.4",
     author="Tomas Karpati",
     author_email="karpati@it4biotech.com",
     description="Useful Tools for Scientific Research",

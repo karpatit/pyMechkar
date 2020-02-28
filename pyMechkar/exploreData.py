@@ -362,7 +362,6 @@ class exploreData: #(object):
                     html = "<div class='Cell'></div><div class='Cell'></div>"
                 elif(aa[v].name == 'object'):
                     #msg.append("The variable %s is not well defined. This data type is not allowed in Table1... avoided" % v)
-                    html = "<div class='Cell Title'> Data type undefined </div>"
                     myhtml.write(html)
                 ### if it is numeric, show
                 elif(aa[v].name == 'float64' or aa[v].name == 'int64' or aa[v].name == 'float32' or aa[v].name == 'int32'):
@@ -394,7 +393,10 @@ class exploreData: #(object):
                     ## join with mv outliers
                     out = np.int64(out)
                     allout = np.amax([out[0], mvout], axis=0)
-                    grp = sns.scatterplot(data.index,data[v],hue=allout)
+                    if(len(allout) > 1):
+                        grp = sns.scatterplot(data.index,data[v],hue=allout)
+                    else:
+                        grp = sns.scatterplot(data.index,data[v])
                     fig = grp.get_figure()
                     fig.savefig("%s/img/%s_2.png" % (dir,v))
                     plt.figure()
@@ -420,7 +422,7 @@ class exploreData: #(object):
                         fig = grp.get_figure()
                         fig.savefig("%s/img/%s_3.png" % (dir,v))
                         plt.figure()
-                        html="""<div class='Cell'><img class="origimg" src="img/%s_3.png"></img></div>""" % (dir,v)
+                        html="""<div class='Cell'><img class="origimg" src="img/%s_3.png"></img></div>""" % v #(dir,v)
                         myhtml.write(html)
                     elif(ydef>0 and v==y):
                         html="""<div class='Cell'></div>"""
@@ -449,8 +451,8 @@ class exploreData: #(object):
                     pct = []
                     for f in range(0,len(nm)):
                         del1 = 0
-                        tp = t_n[f] / ttotal * 100
-                        pct.append("%s: %s (%s%%)" % (nm[f],'{:8,.2f}'.format(round(t_n[f],decimals)), '{:8,.2f}'.format(round(tp,decimals))))
+                        tp = t_n.iloc[f] / ttotal * 100
+                        pct.append("%s: %s (%s%%)" % (nm[f],'{:8,.2f}'.format(round(t_n.iloc[f],decimals)), '{:8,.2f}'.format(round(tp,decimals))))
                         #v1 = pct
                         v1 = '<br>'.join(map(str, pct))
                     v3 = ""
